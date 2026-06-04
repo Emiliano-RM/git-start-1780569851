@@ -1,6 +1,0 @@
-com\corso\moto\controller\BikeController.class
-com\corso\moto\repository\BikeRepository.class
-com\corso\moto\entity\Bike.class
-com\corso\moto\MotoApplication.class
-com\corso\moto\service\BikeService.class
-com\corso\moto\entity\Bike$BikeBuilder.class
