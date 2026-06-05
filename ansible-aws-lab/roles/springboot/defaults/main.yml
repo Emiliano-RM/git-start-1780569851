@@ -1,0 +1,4 @@
+---
+app_repo_url: "https://github.com/Emiliano-RM/git-start-1780569851.git"
+app_dest_dir: "/opt/spring-petclinic"
+server_port: 8080

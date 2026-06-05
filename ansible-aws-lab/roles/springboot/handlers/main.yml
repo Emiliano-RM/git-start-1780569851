@@ -1,0 +1,6 @@
+---
+- name: Riavvia springboot
+  ansible.builtin.systemd:
+    name: springboot
+    state: restarted
+    daemon_reload: true

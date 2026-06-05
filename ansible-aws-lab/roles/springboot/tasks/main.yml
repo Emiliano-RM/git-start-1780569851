@@ -1,0 +1,70 @@
+---
+- name: Installa Java 21, Git e Maven tramite dnf
+  ansible.builtin.dnf:
+    name:
+      - java-21-amazon-corretto-devel
+      - git
+      - maven
+    state: present
+
+- name: Crea la directory per l'applicazione
+  ansible.builtin.file:
+    path: "{{ app_dest_dir }}"
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+    mode: '0755'
+
+- name: Clona il repository del progetto Spring Boot
+  ansible.builtin.git:
+    repo: "{{ app_repo_url }}"
+    dest: "{{ app_dest_dir }}"
+    version: main
+    depth: 1
+  become: false
+
+- name: Trova la cartella contenente il file pom.xml
+  ansible.builtin.find:
+    paths: "{{ app_dest_dir }}"
+    patterns: "pom.xml"
+    recurse: true
+  register: find_pom
+
+- name: Imposta la cartella di progetto corretta come fact
+  ansible.builtin.set_fact:
+    project_root: "{{ find_pom.files[0].path | dirname }}"
+  when: find_pom.matched > 0
+
+- name: Fallisci se non viene trovato alcun file pom.xml
+  ansible.builtin.fail:
+    msg: "Impossibile trovare il file pom.xml nel repository. Verifica la struttura del codice."
+  when: find_pom.matched == 0
+
+- name: Compila l'applicazione con Maven nella cartella corretta
+  ansible.builtin.command:
+    cmd: "mvn clean package -DskipTests"
+    chdir: "{{ project_root }}"
+  become: false
+  changed_when: true
+
+- name: Trova il file JAR compilato
+  ansible.builtin.find:
+    paths: "{{ project_root }}/target"
+    patterns: "*.jar"
+  register: find_jar
+
+- name: Configura il servizio Systemd per Spring Boot
+  ansible.builtin.template:
+    src: springboot.service.j2
+    dest: /etc/systemd/system/springboot.service
+    mode: '0644'
+  vars:
+    jar_path: "{{ find_jar.files[0].path }}"
+    working_dir: "{{ project_root }}"
+  notify: Riavvia springboot
+
+- name: Abilita e avvia il servizio Spring Boot
+  ansible.builtin.systemd:
+    name: springboot
+    enabled: true
+    state: started
